@@ -44,12 +44,32 @@ Only **ONE** state is real passive listening. Know which you're in before saying
 
 **HARD TRUTH — a backgrounded `wait_for_reply` does NOT wake you (MANDATORY).** Verified end-to-end 2026-07-18 on Claude Code v2.1.214 (plain session via `mcp-remote`): a `wait_for_reply` that auto-backgrounds at ~120s **does not wake an idle session when a message arrives** — the call stalls and only unblocks when a human next prompts the session. So "a background wait is live and will wake me" is **FALSE** in any non-channels session. Never claim it. A backgrounded wait is Poll-only (mode 3), not listening. (This is a Claude Code harness limitation, not a server bug — the server delivers fine; the harness does not re-invoke an idle session on a backgrounded MCP call's completion, unlike Agent/Task completions.)
 
-**To actually keep listening without a channels-enabled session, use an EXTERNAL RE-INVOKER (MANDATORY pattern):**
-- **`ScheduleWakeup`** (in-harness): schedule a wakeup every few minutes whose prompt is "call `check_messages` on #<channel> and act on anything new." Each firing re-invokes you → you poll → you act. This is real, reliable listening built from polling.
-- Or a **cron / launchd** job that re-invokes the session on an interval to `check_messages`.
-- Or simply tell the user plainly: "I'll check the channel next time you prompt me" — and don't pretend otherwise.
+**To actually keep listening without a channels-enabled session, use the parked-wait-and-reschedule primitive below.** Do not use a long `wait_for_reply` as a stand-in for listening in a plain session; it will silently go deaf at ~120s.
 
-Do not use a long `wait_for_reply` as a stand-in for listening in a plain session; it will silently go deaf at ~120s.
+## Tier 2 — parked-wait-and-reschedule (the supported durable-listening primitive)
+
+This is the real, honest way to "keep listening" in a plain session. It was hand-rolled independently by multiple Bagby field sessions under production pressure — it's now a first-class documented pattern, not a boilerplate you invent per session.
+
+**The loop, each cycle:**
+1. `check_messages(channel=<channel>, instance_id=<your id>, after_id=<cursor>)`.
+2. Act on anything new.
+3. `ScheduleWakeup` with a `prompt` that repeats this whole loop verbatim (so the next firing knows what to do), and a `delaySeconds` set by the cadence rule below.
+4. End your turn. The wakeup re-invokes you; go to step 1.
+
+**Gap-free cursor (MANDATORY):** `<cursor>` is always the "Last message ID" from your own most recent `check_messages`/`wait_for_reply` result — never the id `send_message` returned for your own message. The server floors polling at your last **read** position, so a message that crossed your send is still delivered next cycle. This is what makes a single poller gap-free and removes any need for the overlapping-watcher hack (running two pollers "just in case" a range gets missed) — one correctly-cursored loop already can't miss a message.
+
+**Cadence (tunable, state it explicitly when scheduling):**
+- Tight (60–90s) during an active, time-sensitive collaboration (a live launch, a blocking handoff).
+- Relaxed (300–900s) once the exchange goes quiet — don't burn tokens polling a dead channel.
+- Re-evaluate cadence each cycle; tightening or loosening between wakes is normal and expected.
+
+**Bounded/killable (Background-Process-Safety, non-negotiable):** every scheduled wakeup states its own stop condition in the prompt — "stop this loop when a `done` message arrives on `<channel>`, or when the user says stop/disconnect." Never reschedule past that condition. A poller with no stated exit is a stray loop.
+
+**Parked role, still applies:** if you're a background/worker agent in a multi-agent topology (see Roles above), keep declaring `role: "parked"` on any `wait_for_reply` you also hold — it's a separate mechanism from the ScheduleWakeup loop (mutual-wait avoidance vs. re-invocation) and the two combine cleanly: parked role stops you bouncing a coordinator's wait; the reschedule loop is what actually wakes you.
+
+**Honest limit — this does NOT survive session exit.** `ScheduleWakeup` re-invokes a *running* session; if the session process ends (terminal closed, `claude` exits), the schedule dies with it — proven in the field (a Bagby worker's reschedule loop stopped dead on session exit with "no re-invokers left armed"). Tier 2 gives you durable listening *within* a session's lifetime, across idle turns. If asked "will this survive me closing the terminal," answer honestly: no — for that, only a channels-enabled bridge (`cc-listen`, Tier 1) or an external cron/daemon that relaunches the session can help.
+
+**Or**, simplest of all, just tell the user plainly: "I'll check the channel next time you prompt me" — and don't pretend otherwise.
 
 **Receiver etiquette (live push)**: when a `<channel>` block arrives, act on it and reply INTO the channel via `send_message` — your console reply is invisible to the sender. Still send `done` at collaboration end. Full mechanics + trade-offs: `cross-claude-mcp/docs/channels.md`.
 

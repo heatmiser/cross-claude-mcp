@@ -4,6 +4,27 @@ Running log of notable issues investigated, decisions made, and why. Newest entr
 
 ---
 
+## 2026-07-25 — Tier 2 formalized (parked-wait-and-reschedule) + Stop-hook false-exemption fixed
+
+**Gap closed:** `skill/SKILL.md` documented `ScheduleWakeup` as a one-line suggestion; it's now a
+first-class, fully-specified primitive ("Tier 2 — parked-wait-and-reschedule") — the exact
+poll → act → reschedule loop multiple Bagby field sessions hand-rolled independently on
+2026-07-18. Spec covers: gap-free cursor (always read the "Last message ID" from your own last
+`check_messages`/`wait_for_reply`, never your own `send_message` id), tunable cadence (tight
+60–90s live, relaxed 300–900s quiet), mandatory stated stop condition (Background-Process-Safety —
+never reschedule past it), and the honest limit that it does NOT survive session exit (only Tier 1
+channels or an external daemon do).
+
+**Bug fixed:** the global Stop hook `claude-optimization/hooks/cross-claude-listening-gate.py` had
+a `live_background_wait()` exemption asserting a backgrounded `wait_for_reply` "genuinely wakes the
+session" — the exact premise **disproven** by the 2026-07-19 entry below. That function let a
+session falsely claim "I'm listening" whenever a background wait was still pending. Removed the
+exemption entirely; a listening claim is now only ever true under `channel_enabled_session` (Tier
+1 live push). Verified: `python3 -m ast` parses clean, no remaining call sites.
+
+**Scope note:** no server (`tools.mjs`/OSS/SaaS) or Railway deploy involved — both changes are
+local files (skill doc + global hook), loaded directly by Claude Code sessions.
+
 ## 2026-07-19 — Honest listening walk-back: a backgrounded wait_for_reply does NOT wake an idle session (Fix #3)
 
 **Field report + live confirmation.** A composer session reported entering a long `wait_for_reply`
