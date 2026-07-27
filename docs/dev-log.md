@@ -4,6 +4,32 @@ Running log of notable issues investigated, decisions made, and why. Newest entr
 
 ---
 
+## 2026-07-27 — Tier-2 parked-role loop + gap-free cursor: PASS (firsthand, CC 2.1.220)
+
+Ran the remaining DONE CHECK lanes from `RESUME.md`: the parked-role park→wake→act loop and
+gap-free cursor coverage, on a **plain session with no channels flag** (the universal Tier-2
+path, not the channels fast lane). Launched a real interactive `claude` in tmux with no special
+config. Prompted it to `check_messages(after_id=0)` on a fresh test channel, find nothing new,
+call `ScheduleWakeup` for a 60s re-check, say `PARKED`, and end its turn (fully idle, no
+backgrounded MCP call — this is the honest Tier-2 shape from `skill/SKILL.md`, distinct from a
+backgrounded `wait_for_reply`, which is proven dead).
+
+While parked, sent one message (`#5407`) to the test channel from a separate instance. ~2 min
+later, `ScheduleWakeup` fired on its own (`✻ Claude resuming /loop wakeup`) — no human
+re-prompt — the session re-checked the same channel and replied `ACK-5407`, the exact message
+sent during its parked window. Confirmed via `tmux capture-pane`, not self-report.
+
+**Verdict: PASS on both counts.** (1) Parked-role loop works exactly as the Bagby field
+sessions hand-rolled it and as `skill/SKILL.md` now formalizes it — park (turn ends, zero
+backgrounded calls) → external re-invoke (ScheduleWakeup) → act → (would re-park on another
+schedule call). (2) Gap-free cursor: the message sent mid-park was neither missed nor
+duplicated — delivered whole on the very next check, no overlapping-watcher hack needed. This
+plus the Tier-1 result below closes the RESUME.md consumer-path requirement for BOTH tiers: a
+genuinely idle plain session received and acted on a message without the user re-prompting it,
+demonstrated on the channels fast path (Tier 1) and the universal self-poller path (Tier 2).
+
+---
+
 ## 2026-07-27 — Decisive Tier-1 live wake test: PASS (firsthand, CC 2.1.220)
 
 Ran the decisive test from `RESUME.md` §Tier-1 that prior sessions could only cite as
