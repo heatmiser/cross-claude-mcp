@@ -150,3 +150,12 @@ and the plugin channel loads clean.
 - **Re-verified on CC 2.1.210 (2026-07-14):** both the dev-flag native door and the bridge
   door wake an idle session; `--mcp-config` works as the channel's server source, but
   `--strict-mcp-config` breaks `server:` name resolution — omit strict.
+- **Firsthand-confirmed decisive Tier-1 wake test, CC 2.1.220 (2026-07-27):** launched a real
+  interactive `claude` in tmux via `bridge/cc-listen`, called `listen_live`, let the session go
+  **fully idle** (turn ended, no backgrounded task). Sent a message from a separate instance to
+  the listened channel. The idle session **spontaneously produced a new turn** — the push was
+  injected (`← cross-claude-bridge: [#channel] sender (message…`) and the model replied with the
+  requested marker with **zero re-prompting**. This closes the "reportedly verified, not
+  firsthand" gap tracked since 2026-07-18 (`RESUME.md` §Tier 1, memory
+  `topology-aware-listening-shipped.md`). PASS — Tier-1 channels wake is real on a plain CC
+  session, contingent on the org `channelsEnabled` gate already being on for the account.

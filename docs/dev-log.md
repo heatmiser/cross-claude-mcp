@@ -4,6 +4,29 @@ Running log of notable issues investigated, decisions made, and why. Newest entr
 
 ---
 
+## 2026-07-27 — Decisive Tier-1 live wake test: PASS (firsthand, CC 2.1.220)
+
+Ran the decisive test from `RESUME.md` §Tier-1 that prior sessions could only cite as
+"reportedly verified." Launched a real interactive `claude` in tmux via `bridge/cc-listen`
+(dev-channels flag, `cross-claude-bridge` MCP confirmed connected via `/mcp`), called
+`listen_live("tier1-live-test-2026-07-27")`, let the turn end (fully idle, nothing
+backgrounded). From a separate instance, sent one message to that channel via
+`send_message`. Without any further input, the idle session produced a new turn on its own —
+the push appeared (`← cross-claude-bridge: [#channel] sender (message…`) and the model replied
+with the requested marker. Confirmed via `tmux capture-pane`, not self-report.
+
+**Verdict: Tier-1 channels wake is real** for a plain CC session, on today's CC build
+(2.1.220), contingent on the account's org `channelsEnabled` gate already being on (it is —
+`cc-listen` loaded channels without error). This closes the firsthand-verification gap
+memory `topology-aware-listening-shipped.md` flagged as remaining. Per the RESUME.md decision,
+Tier 2 (`ScheduleWakeup` self-poller, formalized 2026-07-25) stays the durable, R-owned
+backbone; Tier 1 is confirmed as a legitimate low-latency fast path, not the sole dependency
+(still fragile to an org-policy flip — see channels.md caveats). No server code changed;
+`docs/channels.md` updated with the result. Test session cleaned up (tmux killed), nothing left
+running.
+
+---
+
 ## 2026-07-25 — Tier 2 formalized (parked-wait-and-reschedule) + Stop-hook false-exemption fixed
 
 **Gap closed:** `skill/SKILL.md` documented `ScheduleWakeup` as a one-line suggestion; it's now a
