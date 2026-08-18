@@ -232,7 +232,7 @@ export function registerTools(server, db, planChecker = null) {
     {
       channel: z.string().default("general").describe("Channel to post to. Check list_channels first — only use 'general' if no better channel exists"),
       sender: z.string().describe("Your instance_id"),
-      content: z.string().describe("The message content"),
+      content: z.string().max(65536).describe("The message content"),
       message_type: z.enum(["message", "request", "response", "status", "handoff", "done"]).default("message")
         .describe("Type: message, request, response, status, handoff, done (signals no more replies)"),
       in_reply_to: z.number().optional().describe("Message ID this is replying to"),
@@ -381,7 +381,7 @@ export function registerTools(server, db, planChecker = null) {
       after_id: z.number().describe("Only look for messages after this ID"),
       instance_id: z.string().describe("Your instance_id (filters out your own messages)"),
       timeout_seconds: z.number().default(90).describe("Seconds per poll cycle (default: 90)"),
-      poll_interval_seconds: z.number().default(5).describe("Seconds between polls within a cycle (default: 5)"),
+      poll_interval_seconds: z.number().min(1).default(5).describe("Seconds between polls within a cycle (default: 5)"),
       persistent: z.boolean().default(true).describe("Keep listening across poll cycles until a message arrives (default: true). Pass false for one-shot polling."),
       max_wait_minutes: z.number().default(25).describe("Requested ceiling in minutes for persistent mode (default: 25). CLAMPED to the transport-safe cap (~25 min) — a single wait is held in one HTTP request and cannot survive the server's ~30-min request limit. Larger values are silently clamped; to listen longer, re-issue the wait when it returns on the ceiling (rejoin), or use the channels bridge."),
       role: z.enum(["active", "parked"]).default("active").describe("'active' (default) = a normal coordinator; counts as a mutual-wait party. 'parked' = a background listener that receives every message but never counts as a mutual-wait party, so it can never bounce an active waiter out of its wait and never yields itself."),
@@ -775,7 +775,7 @@ export function registerTools(server, db, planChecker = null) {
     "Store large data (tables, plans, analysis) in a shared store instead of packing it into a message. Other instances can retrieve it by key. Use this for anything over ~500 chars.",
     {
       key: z.string().describe("Unique key for this data (e.g., 'cannibal-analysis', 'faraday-plan')"),
-      content: z.string().describe("The data content to share"),
+      content: z.string().max(1048576).describe("The data content to share"),
       sender: z.string().describe("Your instance_id"),
       description: z.string().optional().describe("Brief description of what this data is"),
     },

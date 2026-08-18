@@ -319,6 +319,9 @@ class PostgresDB {
       max: 5,
       idleTimeoutMillis: 30000,
     });
+    this.pool.on('error', (err) => {
+      console.error('PostgreSQL pool error:', err);
+    });
     await this.pool.query(SCHEMA_SQL);
     await this.pool.query(INDEX_SQL);
     await this.pool.query(SEED_SQL);
