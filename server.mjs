@@ -197,7 +197,7 @@ li{margin:4px 0}</style></head>
 
   // --- REST API (for ChatGPT, Gemini, curl, etc.) ---
 
-  app.use("/api", express.json(), createRestRouter(db));
+  app.use("/api", express.json({ limit: "2mb" }), createRestRouter(db));
 
   // --- Streamable HTTP transport ---
 
