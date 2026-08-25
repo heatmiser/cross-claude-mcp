@@ -17,7 +17,7 @@ const PORT = 9876;
 
 // Kill any lingering process on our test port
 const lsof = spawnSync("lsof", ["-ti", `:${PORT}`], { encoding: "utf-8" });
-if (lsof.stdout.trim()) {
+if (!lsof.error && lsof.stdout?.trim()) {
   for (const pid of lsof.stdout.trim().split("\n")) {
     spawnSync("kill", ["-9", pid]);
   }
@@ -230,6 +230,27 @@ async function runTests() {
     r = await api("GET", "/messages/empty-chan");
     assert(r.data.messages.length === 0, "Empty channel returns empty array");
     assert(r.data.last_id === null, "last_id is null for empty channel");
+
+    // 16. Content size limits
+    console.log("\n16. Content size limits");
+    r = await api("POST", "/messages", {
+      channel: "general", sender: "test",
+      content: "x".repeat(65537),
+    });
+    assert(r.status === 413, "POST /messages rejects content > 64KB with 413");
+
+    r = await api("POST", "/data", {
+      key: "big-data", sender: "test",
+      content: "x".repeat(1048577),
+    });
+    assert(r.status === 413, "POST /data rejects content > 1MB with 413");
+
+    // Boundary: exactly at limit should succeed
+    r = await api("POST", "/messages", {
+      channel: "general", sender: "test",
+      content: "x".repeat(65536),
+    });
+    assert(r.status === 200, "POST /messages accepts content exactly at 64KB");
 
     console.log(`\n${"=".repeat(40)}`);
     console.log(`Results: ${passed} passed, ${failed} failed`);

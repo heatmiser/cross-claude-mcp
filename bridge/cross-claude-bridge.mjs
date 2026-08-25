@@ -1,6 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { readFileSync, writeFileSync, mkdirSync } from "fs";
+import { join, dirname } from "path";
+import { homedir } from "os";
 
 // Channel-less live-delivery bridge.
 //
@@ -13,6 +16,26 @@ import { z } from "zod";
 // BRIDGE_CHANNEL is present) to auto-start one channel at launch — that's how cc-listen works.
 
 const CROSS_CLAUDE_URL = process.env.CROSS_CLAUDE_URL || "https://cross-claude-mcp-production.up.railway.app";
+const CURSOR_FILE = process.env.BRIDGE_CURSOR_FILE || join(homedir(), '.claude', '.cross-claude-bridge-cursors.json');
+
+function loadCursorState() {
+  try {
+    return JSON.parse(readFileSync(CURSOR_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function saveCursorState(state) {
+  try {
+    mkdirSync(dirname(CURSOR_FILE), { recursive: true });
+    writeFileSync(CURSOR_FILE, JSON.stringify(state, null, 2), 'utf8');
+  } catch (err) {
+    console.error(`cursor persist failed: ${err.message}`);
+  }
+}
+
+let cursorState = loadCursorState();
 const CROSS_CLAUDE_API_KEY = process.env.CROSS_CLAUDE_API_KEY;
 const BRIDGE_INSTANCE = process.env.BRIDGE_INSTANCE || null;
 const BRIDGE_POLL_MS = Math.max(2000, parseInt(process.env.BRIDGE_POLL_MS) || 5000);
@@ -46,6 +69,10 @@ const loops = new Map();
 let mcp; // set in main()
 
 async function initCursor(channel) {
+  if (typeof cursorState[channel] === 'number') {
+    console.error(`resuming #${channel} from persisted cursor ${cursorState[channel]}`);
+    return cursorState[channel];
+  }
   const res = await fetchJson(`${CROSS_CLAUDE_URL}/api/messages/${channel}?limit=1`);
   return res.last_id ?? 0;
 }
@@ -71,7 +98,11 @@ async function runLoop(channel) {
         });
         console.error(`bridged #${m.id} from ${m.sender} on #${channel}`);
       }
-      if (typeof res.last_id === "number") state.cursor = res.last_id;
+      if (typeof res.last_id === "number") {
+        state.cursor = res.last_id;
+        cursorState[channel] = res.last_id;
+        saveCursorState(cursorState);
+      }
       state.pollMs = BRIDGE_POLL_MS; // reset backoff after a good poll
     } catch (err) {
       console.error(`poll error on #${channel}: ${err.message}`);

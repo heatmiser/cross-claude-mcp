@@ -81,6 +81,7 @@ export function createRestRouter(db) {
       const { channel = "general", sender, content, message_type = "message", in_reply_to } = req.body;
       if (!sender) return res.status(400).json({ error: "sender is required" });
       if (!content) return res.status(400).json({ error: "content is required" });
+      if (Buffer.byteLength(content) > 65536) return res.status(413).json({ error: "content exceeds 64KB limit" });
       const validTypes = ["message", "request", "response", "status", "handoff", "done"];
       if (!validTypes.includes(message_type)) {
         return res.status(400).json({ error: `message_type must be one of: ${validTypes.join(", ")}` });
@@ -144,6 +145,7 @@ export function createRestRouter(db) {
       if (!key) return res.status(400).json({ error: "key is required" });
       if (!content) return res.status(400).json({ error: "content is required" });
       if (!sender) return res.status(400).json({ error: "sender is required" });
+      if (Buffer.byteLength(content) > 1048576) return res.status(413).json({ error: "content exceeds 1MB limit" });
       await db.shareData(key, content, sender, description || null);
       const size_bytes = Buffer.byteLength(content);
       res.json({ ok: true, key, size_bytes });
