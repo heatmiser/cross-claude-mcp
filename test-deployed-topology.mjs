@@ -12,8 +12,9 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
 const KEY = process.env.CROSS_CLAUDE_API_KEY;
-const URL_BASE = process.env.CROSS_CLAUDE_URL || "https://cross-claude-mcp-production.up.railway.app";
+const URL_BASE = process.env.CROSS_CLAUDE_URL;
 if (!KEY) { console.log("SKIP: CROSS_CLAUDE_API_KEY not set."); process.exit(0); }
+if (!URL_BASE) { console.log("SKIP: CROSS_CLAUDE_URL not set."); process.exit(0); }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let passed = 0, failed = 0;

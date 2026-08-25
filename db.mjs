@@ -59,6 +59,13 @@ const INDEX_SQL = `
   CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel);
   CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender);
   CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
+  CREATE INDEX IF NOT EXISTS idx_messages_in_reply_to ON messages(in_reply_to);
+`;
+
+// pg_trgm extension + GIN index for efficient ILIKE search on message content (PostgreSQL only)
+const PG_TRGM_SQL = `
+  CREATE EXTENSION IF NOT EXISTS pg_trgm;
+  CREATE INDEX IF NOT EXISTS idx_messages_content_trgm ON messages USING GIN (content gin_trgm_ops);
 `;
 
 // Migration: add session_token column to existing instances tables
@@ -327,6 +334,10 @@ class PostgresDB {
     await this.pool.query(SEED_SQL);
     // Migration: add session_token if missing (existing databases)
     await this.pool.query(MIGRATION_SESSION_TOKEN_PG).catch(() => {});
+    // pg_trgm GIN index for efficient ILIKE search — warn if extension unavailable
+    await this.pool.query(PG_TRGM_SQL).catch((err) => {
+      console.error(`pg_trgm setup skipped: ${err.message}`);
+    });
   }
 
   async getInstance(instanceId) {

@@ -22,7 +22,7 @@ const bridgePath = join(here, "bridge", "cross-claude-bridge.mjs");
 const serverPath = join(here, "server.mjs");
 
 const KEY = process.env.CROSS_CLAUDE_API_KEY;
-const URL_BASE = process.env.CROSS_CLAUDE_URL || "https://cross-claude-mcp-production.up.railway.app";
+const URL_BASE = process.env.CROSS_CLAUDE_URL;
 
 let passed = 0, failed = 0;
 const ok = (cond, msg) => {

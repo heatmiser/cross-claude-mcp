@@ -15,7 +15,11 @@ import { homedir } from "os";
 // Backward-compatible: set BRIDGE_CHANNEL (+ optional BRIDGE_AUTOSTART=1, the default when
 // BRIDGE_CHANNEL is present) to auto-start one channel at launch — that's how cc-listen works.
 
-const CROSS_CLAUDE_URL = process.env.CROSS_CLAUDE_URL || "https://cross-claude-mcp-production.up.railway.app";
+const CROSS_CLAUDE_URL = process.env.CROSS_CLAUDE_URL;
+if (!CROSS_CLAUDE_URL) {
+  console.error("Error: CROSS_CLAUDE_URL is required (e.g. http://192.168.1.10:3000)");
+  process.exit(1);
+}
 const CURSOR_FILE = process.env.BRIDGE_CURSOR_FILE || join(homedir(), '.claude', '.cross-claude-bridge-cursors.json');
 
 function loadCursorState() {
