@@ -50,6 +50,16 @@ async function startHTTP(db) {
   const app = express();
   const PORT = parseInt(process.env.PORT) || 3000;
 
+  // --- Security headers ---
+
+  app.use((req, res, next) => {
+    res.header("X-Content-Type-Options", "nosniff");
+    res.header("X-Frame-Options", "DENY");
+    res.header("X-XSS-Protection", "0");
+    res.header("Referrer-Policy", "no-referrer");
+    next();
+  });
+
   // --- CORS (required for Claude Desktop custom connectors) ---
 
   app.use((req, res, next) => {

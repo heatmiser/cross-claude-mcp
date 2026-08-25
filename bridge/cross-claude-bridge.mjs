@@ -143,14 +143,14 @@ async function main() {
 
   mcp.tool(
     "listen_live",
-    "Turn ON live push delivery for a channel from THIS session onward. Starts a poll loop that injects each new message into your context as it arrives (notifications/claude/channel) — real live listening, no wait_for_reply needed, works even while idle. Call again for other channels to listen to several at once. Use stop_listening to turn a channel off.",
+    "Turn ON live push delivery for a channel from THIS session onward. Starts a poll loop that injects each new message into your context as it arrives (notifications/claude/channel) — real event-driven delivery, no wait_for_reply needed. Only effective if this session was launched bridge-enabled (e.g. via cc-listen with this bridge as an MCP server); if the client drops push notifications, use check_messages or wait_for_reply instead. Call again for other channels to listen to several at once. Use stop_listening to turn a channel off.",
     { channel: z.string().describe("Channel to start live-listening to (e.g. 'general', 'bagby-launch')") },
     async ({ channel }) => {
       try {
         const { already, cursor } = await startListening(channel);
         const text = already
-          ? `Already live-listening on #${channel}. New messages are pushed into this session as they arrive.`
-          : `🔔 Live push ON for #${channel} (from message id ${cursor}). New messages will be injected into this session as they arrive — you are genuinely listening, even while idle. Call stop_listening to turn it off.`;
+          ? `Already live-listening on #${channel}. New messages are pushed into this session as they arrive (bridge-enabled sessions only).`
+          : `🔔 Live push ON for #${channel} (from message id ${cursor}). New messages will be injected into this session as they arrive — real event-driven delivery while this bridge is running. If pushes are not reaching you (client drops them), fall back to check_messages or wait_for_reply. Call stop_listening to turn it off.`;
         return { content: [{ type: "text", text }] };
       } catch (err) {
         return { content: [{ type: "text", text: `Could not start live listening on #${channel}: ${err.message}. You can still poll with check_messages or block in wait_for_reply.` }] };

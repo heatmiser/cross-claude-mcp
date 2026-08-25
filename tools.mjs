@@ -186,7 +186,10 @@ export function registerTools(server, db, planChecker = null) {
 
       if (currentInstanceId && currentInstanceId !== instance_id) {
         await db.markOffline(currentInstanceId);
-        if (CHANNELS_ENABLED) channelSessions.delete(currentInstanceId);
+        if (CHANNELS_ENABLED) {
+          channelSessions.delete(currentInstanceId);
+          for (const set of channelSubscriptions.values()) set.delete(currentInstanceId);
+        }
       }
       currentInstanceId = instance_id;
       await db.registerInstance(instance_id, description || null, sessionToken);
