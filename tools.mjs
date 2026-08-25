@@ -108,15 +108,6 @@ export function registerTools(server, db, planChecker = null) {
   // mode and resets on reconnect/restart — degrading to legacy behavior, never worse.
   const readCursors = new Map(); // key: `${channel}\0${instance}` -> last shown message id
   const cursorKey = (channel, instance) => `${channel}\0${instance}`;
-  function effectiveAfter(channel, instance, clientAfterId) {
-    if (!instance) return clientAfterId;
-    const c = readCursors.get(cursorKey(channel, instance));
-    // A cursor we hold is authoritative: a send never advanced it, so a crossing
-    // message still sits above it. Take the lower of the two so we never poll past
-    // an unread message from another instance. No cursor (fresh/post-restart) → trust client.
-    return c === undefined ? clientAfterId : Math.min(c, clientAfterId);
-  }
-
   // Helper functions nested inside registerTools for closure over db, readCursors, etc.
   async function getTenantKey() {
     if (db.tenantId) return db.tenantId;
